@@ -1,0 +1,48 @@
+* emacs-maple-run
+  Execute current buffer with comint mode that can read from stdin.
+
+** How to use?
+   #+begin_src elisp
+     (use-package maple-run
+       :quelpa (:fetcher github :repo "honmaple/emacs-maple-run")
+       :commands (maple-run))
+   #+end_src
+
+   Or alternatively, you can download the repository and install manually by doing:
+   #+begin_src bash
+   git clone https://github.com/honmaple/emacs-maple-run ~/.emacs.d/site-lisp/maple-run
+   #+end_src
+
+   #+begin_src elisp
+     (use-package maple-run
+       :ensure nil
+       :commands (maple-run))
+   #+end_src
+
+** Customize
+   - custom execute commands
+     #+begin_src elisp
+       (add-to-list 'maple-run:alist '(python-mode :command "python %F"))
+       (add-to-list 'maple-run:alist '((html-mode web-mode) :command browse-url-of-file))
+     #+end_src
+
+     *special char*
+     #+begin_example
+     %F - The absolute path of current file.
+     %f - The filename with no directory.
+     %d - The directory name of current file.
+     %B - The absolute path of current file without extension.
+     %b - The filename without extension.
+     #+end_example
+     
+   - other customize
+     #+begin_src elisp
+       ;; The time of process timeout, 0 means never timeout
+       (setq maple-run:timeout 20)
+       ;; auto focus process buffer
+       (setq maple-run:focus t)
+       ;; Whether clear process buffer when execute command every time
+       (setq maple-run:auto-clear nil)
+     #+end_src
+
+
