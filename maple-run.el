@@ -138,24 +138,25 @@
       (setq command (replace-regexp-in-string (car place) (cdr place) command t)))
     command))
 
-(defun maple-run:script (&optional program args proc)
+(defun maple-run:script (&optional proc program &rest args)
   "Run an inferior instance of &optional PROGRAM ARGS PROC."
   (interactive)
   (let* ((program (or program maple-run:program))
          (args    (or args maple-run:arguments))
          (proc    (or proc maple-run:process-name))
-         (buffer  (apply 'make-comint-in-buffer proc nil program nil args))
+         (buffer  (get-buffer-create maple-run:buffer-name))
          process)
+    (when maple-run:focus (pop-to-buffer buffer))
     (with-current-buffer buffer
       (let ((inhibit-read-only t))
         (when maple-run:auto-clear (erase-buffer)))
+      (apply 'make-comint-in-buffer proc buffer program nil args)
       (maple-run-mode)
       (setq-local maple-run:last-command (cons program args)))
     (when (comint-check-proc buffer)
       (setq process (get-buffer-process buffer))
       (set-process-sentinel process 'maple-run:process-sentinel)
-      (when (> maple-run:timeout 0) (run-with-timer maple-run:timeout nil 'maple-run:process-timeout process)))
-    (when maple-run:focus (pop-to-buffer buffer))))
+      (when (> maple-run:timeout 0) (run-with-timer maple-run:timeout nil 'maple-run:process-timeout process)))))
 
 (defun maple-run ()
   "Run current buffer."
@@ -164,13 +165,9 @@
                         when (memq major-mode (if (listp (car args)) (car args) (list (car args))))
                         return (cdr args))))
     (unless alist (error (format "no compile found for %s." major-mode)))
-    (let* ((command (plist-get alist :command))
-           cmdlist program args)
+    (let* ((command (maple-run:command (plist-get alist :command))))
       (if (not (stringp command)) (call-interactively command)
-        (setq cmdlist (split-string-and-unquote (maple-run:command command)))
-        (setq program (or (plist-get alist :program) (car cmdlist)))
-        (setq args    (or (plist-get alist :args) (cdr cmdlist)))
-        (maple-run:script program args)))))
+        (maple-run:script nil shell-file-name shell-command-switch command)))))
 
 (defun maple-run:retry()
   "Run Retry."

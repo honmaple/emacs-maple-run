@@ -18,10 +18,14 @@
        :ensure nil
        :commands (maple-run))
    #+end_src
+   
+   Then just use =maple-run= to execute current buffer, or use =maple-run:script= and execute code file manually.
 
 ** Customize
    - custom execute commands
      #+begin_src elisp
+       (add-to-list 'maple-run:alist '(c-mode :command "gcc %F -o %b && ./%b"))
+       (add-to-list 'maple-run:alist '(cc-mode :command "gcc %F -o /tmp/%b && /tmp/%b"))
        (add-to-list 'maple-run:alist '(python-mode :command "python %F"))
        (add-to-list 'maple-run:alist '((html-mode web-mode) :command browse-url-of-file))
      #+end_src
