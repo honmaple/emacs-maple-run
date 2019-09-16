@@ -60,6 +60,11 @@
   :group 'maple-run
   :type 'boolean)
 
+(defcustom maple-run:auto-directory t
+  "Whether auto switch directory."
+  :group 'maple-run
+  :type 'boolean)
+
 (defcustom maple-run:alist
   '((python-mode
      :command "python %F")
@@ -167,7 +172,10 @@
     (unless alist (error (format "no compile found for %s." major-mode)))
     (let* ((command (maple-run:command (plist-get alist :command))))
       (if (not (stringp command)) (call-interactively command)
-        (maple-run:script nil shell-file-name shell-command-switch command)))))
+        (maple-run:script nil shell-file-name shell-command-switch
+                          (if maple-run:auto-directory
+                              (format "cd %s && %s" (file-name-directory (maple-run:true-file (current-buffer))) command)
+                            command ))))))
 
 (defun maple-run:retry()
   "Run Retry."
