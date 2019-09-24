@@ -157,7 +157,7 @@
         (when maple-run:auto-clear (erase-buffer)))
       (apply 'make-comint-in-buffer proc buffer program nil args)
       (maple-run-mode)
-      (setq-local maple-run:last-command (cons program args)))
+      (setq-local maple-run:last-command (append (list proc program) args)))
     (when (comint-check-proc buffer)
       (setq process (get-buffer-process buffer))
       (set-process-sentinel process 'maple-run:process-sentinel)
@@ -181,7 +181,7 @@
   "Run Retry."
   (interactive)
   (if maple-run:last-command
-      (maple-run:script (car maple-run:last-command) (cdr maple-run:last-command))
+      (apply 'maple-run:script maple-run:last-command)
     (message "no last command found")))
 
 (defun maple-run:finish()
