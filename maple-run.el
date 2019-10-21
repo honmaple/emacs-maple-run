@@ -85,14 +85,17 @@
 (defvar maple-run:buffer-name "*maple-run-process*")
 (defvar maple-run:process-name "maple-run-process")
 (defvar maple-run:temp-files nil)
-(defvar maple-run:last-command nil)
+(defvar maple-run:last-buffer nil)
 
 (defun maple-run:process-sentinel(process _msg)
   "Start process sentinel with PROCESS MSG."
   (when (memq (process-status process) '(exit signal))
     (maple-run:remove-temp-files)
     (let ((input (read-char "Press 'r' to run again, any other key to finish.")))
-      (if (char-equal input ?r) (maple-run:retry) (maple-run:finish)))))
+      (if (char-equal input ?r)
+          (condition-case err (maple-run:retry t)
+            (error (read-char (format "Press any key to finish %s." (cdr err))) (maple-run:finish)))
+        (maple-run:finish)))))
 
 (defun maple-run:process-timeout(process)
   "Start process timeout with PROCESS MSG."
@@ -129,10 +132,9 @@
           (insert content))
         (push filename maple-run:temp-files) filename))))
 
-(defun maple-run:command (command &optional buffer)
-  "Get whole command with COMMAND BUFFER."
-  (let* ((buffer (or buffer (current-buffer)))
-         (filename (maple-run:true-file buffer))
+(defun maple-run:command (command &optional file)
+  "Get whole command with COMMAND FILE."
+  (let* ((filename (or file (maple-run:true-file (current-buffer))))
          (places `(("%b" . ,(file-name-nondirectory (file-name-sans-extension filename)))
                    ("%f" . ,(file-name-nondirectory filename))
                    ("%d" . ,(file-name-directory filename))
@@ -156,8 +158,7 @@
       (let ((inhibit-read-only t))
         (when maple-run:auto-clear (erase-buffer)))
       (apply 'make-comint-in-buffer proc buffer program nil args)
-      (maple-run-mode)
-      (setq-local maple-run:last-command (append (list proc program) args)))
+      (maple-run-mode))
     (when (comint-check-proc buffer)
       (setq process (get-buffer-process buffer))
       (set-process-sentinel process 'maple-run:process-sentinel)
@@ -166,23 +167,27 @@
 (defun maple-run ()
   "Run current buffer."
   (interactive)
-  (let ((alist (cl-loop for args in maple-run:alist
-                        when (memq major-mode (if (listp (car args)) (car args) (list (car args))))
-                        return (cdr args))))
+  (let ((alist  (cl-loop for args in maple-run:alist
+                         when (memq major-mode (if (listp (car args)) (car args) (list (car args))))
+                         return (cdr args)))
+        (buffer (current-buffer)))
     (unless alist (error (format "no compile found for %s." major-mode)))
-    (let* ((command (maple-run:command (plist-get alist :command))))
+    (let* ((filename (maple-run:true-file buffer))
+           (command  (maple-run:command (plist-get alist :command) filename)))
+      (setq maple-run:last-buffer buffer)
       (if (not (stringp command)) (call-interactively command)
         (maple-run:script nil shell-file-name shell-command-switch
                           (if maple-run:auto-directory
-                              (format "cd %s && %s" (file-name-directory (maple-run:true-file (current-buffer))) command)
-                            command ))))))
+                              (format "cd %s && %s" (file-name-directory filename) command)
+                            command))))))
 
-(defun maple-run:retry()
-  "Run Retry."
+(defun maple-run:retry(&optional error)
+  "Run Retry raise ERROR."
   (interactive)
-  (if maple-run:last-command
-      (apply 'maple-run:script maple-run:last-command)
-    (message "no last command found")))
+  (if (and maple-run:last-buffer (buffer-live-p maple-run:last-buffer))
+      (with-current-buffer maple-run:last-buffer (maple-run))
+    (if error (error "There is no last buffer found")
+      (message "There is no last buffer found"))))
 
 (defun maple-run:finish()
   "Run Finish."
