@@ -91,6 +91,7 @@
   "Start process sentinel with PROCESS MSG."
   (when (memq (process-status process) '(exit signal))
     (maple-run:remove-temp-files)
+    ;; (maple-run:insert-text "Finish.\n")
     (let ((input (read-char "Press 'r' to run again, any other key to finish.")))
       (if (char-equal input ?r)
           (condition-case err (maple-run:retry t)
@@ -102,11 +103,15 @@
   (when (eq (process-status process) 'run)
     (kill-process process)
     (let ((buffer (get-buffer maple-run:buffer-name)))
-      (with-current-buffer buffer
-        (insert (format "\nTime out %s(running over %d second)"
-                        (process-name process) maple-run:timeout)))
+      (maple-run:insert-text (format "\nTime out %s(running over %d second)" (process-name process) maple-run:timeout) buffer)
       (maple-run:remove-temp-files)
       (pop-to-buffer buffer))))
+
+(defun maple-run:insert-text(message &optional buffer)
+  "Insert MESSAGE in BUFFER."
+  (with-current-buffer (or buffer (get-buffer maple-run:buffer-name))
+    (let ((inhibit-read-only t))
+      (insert (propertize message 'font-lock-face 'font-lock-constant-face)))))
 
 (defun maple-run:remove-temp-files()
   "Remove temp files."
