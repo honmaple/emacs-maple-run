@@ -87,6 +87,8 @@
 (defvar maple-run:temp-files nil)
 (defvar maple-run:last-buffer nil)
 
+(declare-function evil-normal-state 'evil)
+
 (defun maple-run:process-sentinel(process _msg)
   "Start process sentinel with PROCESS MSG."
   (when (memq (process-status process) '(exit signal))
@@ -97,7 +99,7 @@
              (condition-case err (maple-run:retry t)
                (error (read-char (format "Press any key to finish %s." (cdr err))) (maple-run:finish))))
             ((char-equal input 27)
-             (when (bound-and-true-p evil-mode) (evil-normal-state)))
+             (if (bound-and-true-p evil-mode) (evil-normal-state) (maple-run:finish)))
             ((char-equal input ?w)
              (kill-new (replace-regexp-in-string "^\n$" "" (buffer-substring (point-min) (point-max))))
              (maple-run:finish)
