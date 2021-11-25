@@ -183,16 +183,19 @@
   (let ((alist  (cl-loop for args in maple-run:alist
                          when (memq major-mode (if (listp (car args)) (car args) (list (car args))))
                          return (cdr args)))
-        (buffer (current-buffer)))
-    (unless alist (error (format "no compile found for %s." major-mode)))
-    (let* ((filename (maple-run:true-file buffer))
-           (command  (maple-run:command (plist-get alist :command) filename)))
-      (setq maple-run:last-buffer buffer)
-      (if (not (stringp command)) (call-interactively command)
+        (buffer (current-buffer)) command)
+    (when alist
+      (setq command (plist-get alist :command)))
+    (unless command (error (format "no compile command found for %s." major-mode)))
+
+    (if (symbolp command) (call-interactively command)
+      (let* ((filename (maple-run:true-file buffer))
+             (commands (maple-run:command command filename)))
+        (setq maple-run:last-buffer buffer)
         (maple-run:script nil shell-file-name shell-command-switch
                           (if maple-run:auto-directory
-                              (format "cd %s && %s" (file-name-directory filename) command)
-                            command))))))
+                              (format "cd %s && %s" (file-name-directory filename) commands)
+                            commands))))))
 
 (defun maple-run:retry(&optional error)
   "Run Retry raise ERROR."
