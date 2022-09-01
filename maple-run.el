@@ -1,6 +1,6 @@
 ;;; maple-run.el ---  Execute current buffer.	-*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 lin.jiang
+;; Copyright (C) 2019-2022 lin.jiang
 
 ;; Author: lin.jiang <mail@honmaple.com>
 ;; URL: https://github.com/honmaple/emacs-maple-run
@@ -27,7 +27,7 @@
 (require 'comint)
 
 (defgroup maple-run nil
-  "Execute buffer with comint"
+  "Execute buffer with comint."
   :group 'maple)
 
 (defcustom maple-run:program "bash"
@@ -88,6 +88,17 @@
 (defvar maple-run:last-buffer nil)
 
 (declare-function evil-normal-state 'evil)
+
+(defun maple-run:program-update(&optional beg end len string)
+  (let ((string (buffer-substring-no-properties beg end)))
+    (delete-minibuffer-contents)
+    (insert string)
+    (remove-hook 'after-change-functions 'maple-run:program-update t)))
+
+(defun maple-run:program-input()
+  (minibuffer-with-setup-hook
+      (lambda() (add-hook 'after-change-functions 'maple-run:program-update nil t))
+    (read-string "Compile Command: " (propertize maple-run:program 'face 'shadow))))
 
 (defun maple-run:process-sentinel(process _msg)
   "Start process sentinel with PROCESS MSG."
@@ -161,7 +172,7 @@
 (defun maple-run:script (&optional proc program &rest args)
   "Run an inferior instance of &optional PROGRAM ARGS PROC."
   (interactive)
-  (let* ((program (or program maple-run:program))
+  (let* ((program (or program (maple-run:program-input)))
          (args    (or args maple-run:arguments))
          (proc    (or proc maple-run:process-name))
          (buffer  (get-buffer-create maple-run:buffer-name))
